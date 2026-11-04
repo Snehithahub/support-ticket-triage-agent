@@ -159,7 +159,7 @@ def create_app(
             ticket_id, created = store.create_ticket(conn, ticket, demo_mode=s.llm.demo)
         if not created:
             response.status_code = 200
-            return _ticket_out(s, ticket_id, replay=True)
+            return _ticket_out(s, ticket_id, replay=True, keep_contact=True)
         t0 = time.perf_counter()
         try:
             state = run_triage(s.graph, ticket.subject, ticket.body)
@@ -183,7 +183,7 @@ def create_app(
                 "ms": triage_ms,
             },
         )
-        return _ticket_out(s, ticket_id, replay=False)
+        return _ticket_out(s, ticket_id, replay=False, keep_contact=True)
 
     @app.get("/tickets")
     def list_tickets(
@@ -296,14 +296,23 @@ def create_app(
     return app
 
 
-def _ticket_out(s: AppState, ticket_id: UUID, *, replay: bool | None = None, include_raw: bool = False) -> dict:
+def _ticket_out(
+    s: AppState,
+    ticket_id: UUID,
+    *,
+    replay: bool | None = None,
+    include_raw: bool = False,
+    keep_contact: bool = False,
+) -> dict:
+    """keep_contact: echo customer_email back to the caller that submitted it (n8n uses it)."""
     with s.pool.connection() as conn:
         t = store.get_ticket(conn, ticket_id)
     if t is None:
         raise HTTPException(status_code=404, detail="ticket not found")
     if not include_raw:
         # Raw text and contact details stay out of default responses; masked_body is the safe view.
-        for key in ("body", "clean_body", "customer_email"):
+        hidden = ("body", "clean_body") if keep_contact else ("body", "clean_body", "customer_email")
+        for key in hidden:
             t.pop(key, None)
         t["subject"] = mask_pii(t["subject"] or "").text
     out = jsonable_encoder(t)

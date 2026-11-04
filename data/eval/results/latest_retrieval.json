@@ -1,7 +1,7 @@
 {
   "meta": {
     "timestamp": "2026-11-04T13:13:42+00:00",
-    "tickets_file": "/home/snehithatelkapally/Desktop/claudecode/projects/support-ticket-triage-agent/data/eval/tickets.jsonl",
+    "tickets_file": "data/eval/tickets.jsonl",
     "tickets_sha256": "94ef76f074c61687",
     "limit": null,
     "retrieval_only": true,

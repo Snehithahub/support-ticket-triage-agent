@@ -101,11 +101,12 @@ def test_raw_pii_hidden_by_default(client):
             "external_id": "pii-1",
         },
     ).json()
-    assert "body" not in t and "customer_email" not in t
+    assert "body" not in t and t["customer_email"] == "a.b@shop.in"  # echoed to the submitter only
     assert "9876543210" not in t["subject"] and "[PHONE_1]" in t["subject"]
     assert "a.b@shop.in" not in t["masked_body"]
     listed = client.get("/tickets", params={"limit": 500}).json()["items"]
     assert all("9876543210" not in i["subject"] for i in listed)
+    assert "customer_email" not in client.get(f"/tickets/{t['id']}").json()
     raw = client.get(f"/tickets/{t['id']}", params={"include_raw": True}).json()
     assert raw["customer_email"] == "a.b@shop.in" and "a.b@shop.in" in raw["body"]
     assert client.get("/tickets", params={"urgency": "critical"}).status_code == 200

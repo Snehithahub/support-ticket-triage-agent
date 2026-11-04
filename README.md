@@ -106,6 +106,9 @@ curl -s -X POST localhost:5679/webhook/ticket -H 'Content-Type: application/json
   -d '{"subject":"Webhook signature mismatch","body":"Our endpoint rejects every event, the X-Northwind-Signature never matches. We compute the HMAC on the parsed JSON."}'
 ```
 
+The workflow, its nodes and the disabled Slack, email and IMAP placeholders are documented in
+[`n8n/README.md`](n8n/README.md).
+
 Stop and remove everything with `docker compose -f docker-compose.yml -f docker-compose.n8n.yml down -v`.
 
 ### Demo mode
@@ -248,7 +251,32 @@ The suite covers:
 - the API endpoints against real Postgres (idempotency, review conflicts, validation, PII hiding, metrics, events);
 - the review UI.
 
-RESULTS_TESTS_PLACEHOLDER
+Measured on this machine on 2026-11-04:
+- **Full suite:** `pytest -q` passed all 179 tests. The 13 integration tests ran twice: once
+  against a testcontainers pgvector, and once against the compose Postgres via `TEST_DATABASE_URL`.
+- **Lint:** `ruff check .` and `ruff format --check .` are clean.
+
+CI (`.github/workflows/ci.yml`) has two jobs:
+- lint plus the full suite, with a `pgvector/pgvector:pg16` service container;
+- validation of the n8n workflow JSON, then an import and publish into the pinned n8n image.
+
+No LLM key is used in CI.
+
+### Verified live in Docker (demo mode)
+
+These steps were run with `docker compose -f docker-compose.yml -f docker-compose.n8n.yml up -d --build`:
+1. All services became healthy, and the API ingested 49 articles (180 chunks) with fastembed on startup.
+2. `n8n-import` imported and published the workflow.
+3. Four tickets posted to `http://localhost:5679/webhook/ticket` came back through n8n's Switch:
+   - a webhook-signature question returned `auto_send`;
+   - a refund ARN query returned `human_review` (team payments-ops);
+   - "all payments failing, production down" returned `escalate` (critical);
+   - a replay of the refund ticket with the same `external_id` returned `idempotent_replay: true`.
+4. Each routed ticket got an `n8n_routed` event stored in Postgres.
+5. The review UI answered on port 8502.
+6. Triage latency in demo mode, as reported by `/metrics` over 7 tickets: p50 191 ms, p95 368 ms.
+
+Everything was then removed with `down -v`.
 
 ## Evaluation
 
@@ -264,7 +292,7 @@ python -m triagedesk.eval --provider gemini       # full run (needs LLM_API_KEY)
 
 The mix includes 15 multi-intent tickets, 8 genuinely ambiguous ones, 19 in Hinglish, and 20 with
 fake PII, signatures or quoted replies. `should_automate` is true only for single-intent
-informational how-to tickets that the gold article fully answers (54 tickets). Tickets were
+informational how-to tickets that the gold article fully answers (52 tickets). Tickets were
 written to describe symptoms rather than repeat article titles.
 
 **Metrics reported:**
@@ -272,7 +300,7 @@ written to describe symptoms rather than repeat article titles.
 - retrieval hit@k and MRR against the gold article;
 - citation validity;
 - per-category auto-resolution rate: the share of tickets the policy would auto-send whose draft is acceptable;
-- simulated and recorded handling time;
+- recorded handling time per review action (approve, edit, reject), from `/metrics` and the eval report;
 - a per-intent recommendation table that says whether each category is safe to automate, and at what threshold.
 
 ### Results: measured on this machine (2026-11-04)
@@ -352,6 +380,7 @@ handling-time numbers are reported.
 - Reviewer authentication and role-based access to raw PII in the UI.
 - Gmail/IMAP intake enabled by default with OAuth credentials; outbound send from n8n after approval.
 - Multilingual embeddings for Hindi in Devanagari script.
+- Simulated handling-time model (cost per approve, edit or rewrite), calibrated from recorded review times.
 
 ## License
 
