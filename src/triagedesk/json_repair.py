@@ -57,9 +57,7 @@ def _candidates(text: str) -> list[str]:
 
 
 def _repairs(s: str) -> list[str]:
-    fixed = (
-        s.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
-    )
+    fixed = s.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
     fixed = _LINE_COMMENT_RE.sub("", fixed)
     fixed = _TRAILING_COMMA_RE.sub(r"\1", fixed)
     variants = [fixed]

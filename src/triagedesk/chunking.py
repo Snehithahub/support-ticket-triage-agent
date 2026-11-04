@@ -18,6 +18,12 @@ _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
 
 
+# Bump when chunking logic or defaults change, so ingest re-chunks unchanged articles.
+CHUNKER_VERSION = "heading-v1:max180:min40"
+MAX_WORDS = 180
+MIN_WORDS = 40
+
+
 @dataclass(frozen=True)
 class Article:
     id: str
@@ -28,7 +34,7 @@ class Article:
 
     @property
     def content_hash(self) -> str:
-        return hashlib.sha256(f"{self.title}\n{self.category}\n{self.body}".encode()).hexdigest()
+        return hashlib.sha256(f"{CHUNKER_VERSION}\n{self.title}\n{self.category}\n{self.body}".encode()).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -110,7 +116,7 @@ def _split_long(text: str, max_words: int) -> list[str]:
     return parts
 
 
-def chunk_article(article: Article, *, max_words: int = 180, min_words: int = 40) -> list[Chunk]:
+def chunk_article(article: Article, *, max_words: int = MAX_WORDS, min_words: int = MIN_WORDS) -> list[Chunk]:
     pieces: list[tuple[str, str]] = []
     for path, text in _sections(article):
         heading = " > ".join(path)
@@ -121,4 +127,7 @@ def chunk_article(article: Article, *, max_words: int = 180, min_words: int = 40
                 pieces[-1] = (prev_heading, f"{prev_text}\n\n{sub}:\n{part}")
             else:
                 pieces.append((heading, part))
+    if len(pieces) > 1 and len(pieces[0][1].split()) < min_words:
+        intro = pieces.pop(0)[1]
+        pieces[0] = (pieces[0][0], f"{intro}\n\n{pieces[0][1]}")
     return [Chunk(article.id, i, h, t) for i, (h, t) in enumerate(pieces)]

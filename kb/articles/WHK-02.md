@@ -20,6 +20,7 @@ To verify a request, compute the same HMAC on your side and compare it with the 
 import hmac
 import hashlib
 
+
 def is_valid_signature(raw_body: bytes, signature: str, secret: str) -> bool:
     expected = hmac.new(
         secret.encode("utf-8"),

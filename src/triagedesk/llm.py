@@ -55,16 +55,13 @@ class OpenAICompatibleClient:
         self._sleep = sleep
         if azure_api_version:
             self._url = (
-                f"{base_url.rstrip('/')}/openai/deployments/{model}/chat/completions"
-                f"?api-version={azure_api_version}"
+                f"{base_url.rstrip('/')}/openai/deployments/{model}/chat/completions?api-version={azure_api_version}"
             )
             headers = {"api-key": api_key}
         else:
             self._url = f"{base_url.rstrip('/')}/chat/completions"
             headers = {"Authorization": f"Bearer {api_key}"}
-        self._http = httpx.Client(
-            timeout=httpx.Timeout(timeout_s, connect=10.0), headers=headers, transport=transport
-        )
+        self._http = httpx.Client(timeout=httpx.Timeout(timeout_s, connect=10.0), headers=headers, transport=transport)
 
     def chat(self, messages: list[dict[str, str]], *, json_mode: bool = False) -> str:
         body: dict = {"model": self.model, "messages": messages, "temperature": 0.0}

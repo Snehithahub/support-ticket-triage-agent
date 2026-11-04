@@ -1,0 +1,824 @@
+{
+  "meta": {
+    "timestamp": "2026-11-04T13:13:42+00:00",
+    "tickets_file": "/home/snehithatelkapally/Desktop/claudecode/projects/support-ticket-triage-agent/data/eval/tickets.jsonl",
+    "tickets_sha256": "94ef76f074c61687",
+    "limit": null,
+    "retrieval_only": true,
+    "embedder": "fastembed:BAAI/bge-small-en-v1.5",
+    "retrieval_candidates": 20,
+    "rrf_k": 60,
+    "kb_chunks": 180
+  },
+  "dataset": {
+    "tickets": 189,
+    "by_intent": {
+      "account_access": 15,
+      "api_keys": 15,
+      "billing": 15,
+      "checkout": 16,
+      "disputes": 17,
+      "failed_payments": 16,
+      "kyc": 17,
+      "other": 12,
+      "payouts": 17,
+      "refunds": 16,
+      "settlements": 17,
+      "webhooks": 16
+    },
+    "by_difficulty": {
+      "easy": 166,
+      "ambiguous": 8,
+      "multi_intent": 15
+    },
+    "hinglish": 19,
+    "should_automate": 52,
+    "with_gold_articles": 177
+  },
+  "retrieval": {
+    "scored_tickets": 177,
+    "skipped_no_gold": 12,
+    "fetch_chunks": 20,
+    "modes": {
+      "hybrid": {
+        "n": 177,
+        "hit@1": 0.661,
+        "hit@3": 0.8644,
+        "hit@5": 0.9322,
+        "mrr@10": 0.7706,
+        "recall@5": 0.8578,
+        "by_difficulty": {
+          "easy": {
+            "n": 154,
+            "hit@1": 0.6623,
+            "hit@3": 0.8766,
+            "hit@5": 0.9481,
+            "mrr@10": 0.7772,
+            "recall@5": 0.8896
+          },
+          "ambiguous": {
+            "n": 8,
+            "hit@1": 0.25,
+            "hit@3": 0.375,
+            "hit@5": 0.5,
+            "mrr@10": 0.3375,
+            "recall@5": 0.375
+          },
+          "multi_intent": {
+            "n": 15,
+            "hit@1": 0.8667,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr@10": 0.9333,
+            "recall@5": 0.7889
+          }
+        },
+        "by_intent": {
+          "account_access": {
+            "n": 15,
+            "hit@1": 0.6667,
+            "hit@3": 0.8667,
+            "hit@5": 0.8667,
+            "mrr@10": 0.7778,
+            "recall@5": 0.8667
+          },
+          "api_keys": {
+            "n": 15,
+            "hit@1": 0.9333,
+            "hit@3": 0.9333,
+            "hit@5": 0.9333,
+            "mrr@10": 0.9333,
+            "recall@5": 0.9333
+          },
+          "billing": {
+            "n": 15,
+            "hit@1": 0.5333,
+            "hit@3": 0.9333,
+            "hit@5": 1.0,
+            "mrr@10": 0.7278,
+            "recall@5": 1.0
+          },
+          "checkout": {
+            "n": 16,
+            "hit@1": 0.75,
+            "hit@3": 0.8125,
+            "hit@5": 0.875,
+            "mrr@10": 0.8047,
+            "recall@5": 0.8438
+          },
+          "disputes": {
+            "n": 17,
+            "hit@1": 0.5294,
+            "hit@3": 0.8824,
+            "hit@5": 0.9412,
+            "mrr@10": 0.6814,
+            "recall@5": 0.7549
+          },
+          "failed_payments": {
+            "n": 16,
+            "hit@1": 0.8125,
+            "hit@3": 0.9375,
+            "hit@5": 1.0,
+            "mrr@10": 0.8771,
+            "recall@5": 0.9062
+          },
+          "kyc": {
+            "n": 17,
+            "hit@1": 0.6471,
+            "hit@3": 0.8235,
+            "hit@5": 0.8824,
+            "mrr@10": 0.7574,
+            "recall@5": 0.8235
+          },
+          "payouts": {
+            "n": 17,
+            "hit@1": 0.4706,
+            "hit@3": 0.6471,
+            "hit@5": 0.8235,
+            "mrr@10": 0.5938,
+            "recall@5": 0.7353
+          },
+          "refunds": {
+            "n": 16,
+            "hit@1": 0.75,
+            "hit@3": 0.875,
+            "hit@5": 1.0,
+            "mrr@10": 0.8271,
+            "recall@5": 0.9062
+          },
+          "settlements": {
+            "n": 17,
+            "hit@1": 0.6471,
+            "hit@3": 0.8824,
+            "hit@5": 0.9412,
+            "mrr@10": 0.7794,
+            "recall@5": 0.7647
+          },
+          "webhooks": {
+            "n": 16,
+            "hit@1": 0.5625,
+            "hit@3": 0.9375,
+            "hit@5": 1.0,
+            "mrr@10": 0.7417,
+            "recall@5": 0.9375
+          }
+        },
+        "latency_ms_p50": 29.9
+      },
+      "vector": {
+        "n": 177,
+        "hit@1": 0.6215,
+        "hit@3": 0.8418,
+        "hit@5": 0.8983,
+        "mrr@10": 0.7398,
+        "recall@5": 0.8164,
+        "by_difficulty": {
+          "easy": {
+            "n": 154,
+            "hit@1": 0.6169,
+            "hit@3": 0.8506,
+            "hit@5": 0.9156,
+            "mrr@10": 0.7412,
+            "recall@5": 0.8442
+          },
+          "ambiguous": {
+            "n": 8,
+            "hit@1": 0.25,
+            "hit@3": 0.375,
+            "hit@5": 0.375,
+            "mrr@10": 0.3512,
+            "recall@5": 0.25
+          },
+          "multi_intent": {
+            "n": 15,
+            "hit@1": 0.8667,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr@10": 0.9333,
+            "recall@5": 0.8333
+          }
+        },
+        "by_intent": {
+          "account_access": {
+            "n": 15,
+            "hit@1": 0.6667,
+            "hit@3": 0.8,
+            "hit@5": 0.8667,
+            "mrr@10": 0.7389,
+            "recall@5": 0.8333
+          },
+          "api_keys": {
+            "n": 15,
+            "hit@1": 0.8667,
+            "hit@3": 0.9333,
+            "hit@5": 0.9333,
+            "mrr@10": 0.9,
+            "recall@5": 0.9333
+          },
+          "billing": {
+            "n": 15,
+            "hit@1": 0.6,
+            "hit@3": 0.9333,
+            "hit@5": 0.9333,
+            "mrr@10": 0.763,
+            "recall@5": 0.9
+          },
+          "checkout": {
+            "n": 16,
+            "hit@1": 0.75,
+            "hit@3": 0.875,
+            "hit@5": 0.875,
+            "mrr@10": 0.818,
+            "recall@5": 0.8438
+          },
+          "disputes": {
+            "n": 17,
+            "hit@1": 0.5294,
+            "hit@3": 0.8235,
+            "hit@5": 0.9412,
+            "mrr@10": 0.6863,
+            "recall@5": 0.8137
+          },
+          "failed_payments": {
+            "n": 16,
+            "hit@1": 0.6875,
+            "hit@3": 0.75,
+            "hit@5": 0.875,
+            "mrr@10": 0.7573,
+            "recall@5": 0.7812
+          },
+          "kyc": {
+            "n": 17,
+            "hit@1": 0.5882,
+            "hit@3": 0.7647,
+            "hit@5": 0.8824,
+            "mrr@10": 0.6833,
+            "recall@5": 0.7941
+          },
+          "payouts": {
+            "n": 17,
+            "hit@1": 0.3529,
+            "hit@3": 0.6471,
+            "hit@5": 0.7059,
+            "mrr@10": 0.528,
+            "recall@5": 0.5882
+          },
+          "refunds": {
+            "n": 16,
+            "hit@1": 0.625,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr@10": 0.8021,
+            "recall@5": 0.75
+          },
+          "settlements": {
+            "n": 17,
+            "hit@1": 0.5294,
+            "hit@3": 0.8235,
+            "hit@5": 0.8824,
+            "mrr@10": 0.6789,
+            "recall@5": 0.8039
+          },
+          "webhooks": {
+            "n": 16,
+            "hit@1": 0.6875,
+            "hit@3": 0.9375,
+            "hit@5": 1.0,
+            "mrr@10": 0.8177,
+            "recall@5": 0.9688
+          }
+        },
+        "latency_ms_p50": 21.3
+      },
+      "fts": {
+        "n": 177,
+        "hit@1": 0.548,
+        "hit@3": 0.7853,
+        "hit@5": 0.8418,
+        "mrr@10": 0.6808,
+        "recall@5": 0.7731,
+        "by_difficulty": {
+          "easy": {
+            "n": 154,
+            "hit@1": 0.5455,
+            "hit@3": 0.7857,
+            "hit@5": 0.8442,
+            "mrr@10": 0.6799,
+            "recall@5": 0.7922
+          },
+          "ambiguous": {
+            "n": 8,
+            "hit@1": 0.125,
+            "hit@3": 0.375,
+            "hit@5": 0.5,
+            "mrr@10": 0.3085,
+            "recall@5": 0.4375
+          },
+          "multi_intent": {
+            "n": 15,
+            "hit@1": 0.8,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr@10": 0.8889,
+            "recall@5": 0.7556
+          }
+        },
+        "by_intent": {
+          "account_access": {
+            "n": 15,
+            "hit@1": 0.7333,
+            "hit@3": 0.8,
+            "hit@5": 0.8667,
+            "mrr@10": 0.7895,
+            "recall@5": 0.8333
+          },
+          "api_keys": {
+            "n": 15,
+            "hit@1": 0.8,
+            "hit@3": 0.9333,
+            "hit@5": 0.9333,
+            "mrr@10": 0.8762,
+            "recall@5": 0.9333
+          },
+          "billing": {
+            "n": 15,
+            "hit@1": 0.6,
+            "hit@3": 0.8,
+            "hit@5": 0.8667,
+            "mrr@10": 0.7167,
+            "recall@5": 0.8667
+          },
+          "checkout": {
+            "n": 16,
+            "hit@1": 0.625,
+            "hit@3": 0.75,
+            "hit@5": 0.8125,
+            "mrr@10": 0.7068,
+            "recall@5": 0.7188
+          },
+          "disputes": {
+            "n": 17,
+            "hit@1": 0.4706,
+            "hit@3": 0.6471,
+            "hit@5": 0.7647,
+            "mrr@10": 0.607,
+            "recall@5": 0.6373
+          },
+          "failed_payments": {
+            "n": 16,
+            "hit@1": 0.75,
+            "hit@3": 0.875,
+            "hit@5": 0.9375,
+            "mrr@10": 0.8354,
+            "recall@5": 0.8438
+          },
+          "kyc": {
+            "n": 17,
+            "hit@1": 0.5294,
+            "hit@3": 0.8824,
+            "hit@5": 0.8824,
+            "mrr@10": 0.6961,
+            "recall@5": 0.8235
+          },
+          "payouts": {
+            "n": 17,
+            "hit@1": 0.2353,
+            "hit@3": 0.6471,
+            "hit@5": 0.7059,
+            "mrr@10": 0.4461,
+            "recall@5": 0.6176
+          },
+          "refunds": {
+            "n": 16,
+            "hit@1": 0.625,
+            "hit@3": 0.875,
+            "hit@5": 0.875,
+            "mrr@10": 0.7292,
+            "recall@5": 0.8438
+          },
+          "settlements": {
+            "n": 17,
+            "hit@1": 0.4118,
+            "hit@3": 0.7059,
+            "hit@5": 0.7647,
+            "mrr@10": 0.5845,
+            "recall@5": 0.6176
+          },
+          "webhooks": {
+            "n": 16,
+            "hit@1": 0.3125,
+            "hit@3": 0.75,
+            "hit@5": 0.875,
+            "mrr@10": 0.5475,
+            "recall@5": 0.8125
+          }
+        },
+        "latency_ms_p50": 7.0
+      },
+      "hybrid+gold_intent_filter": {
+        "n": 177,
+        "hit@1": 0.8305,
+        "hit@3": 0.9831,
+        "hit@5": 1.0,
+        "mrr@10": 0.9054,
+        "recall@5": 0.9435,
+        "by_difficulty": {
+          "easy": {
+            "n": 154,
+            "hit@1": 0.8312,
+            "hit@3": 0.9935,
+            "hit@5": 1.0,
+            "mrr@10": 0.9075,
+            "recall@5": 0.9838
+          },
+          "ambiguous": {
+            "n": 8,
+            "hit@1": 0.625,
+            "hit@3": 0.75,
+            "hit@5": 1.0,
+            "mrr@10": 0.75,
+            "recall@5": 0.875
+          },
+          "multi_intent": {
+            "n": 15,
+            "hit@1": 0.9333,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr@10": 0.9667,
+            "recall@5": 0.5667
+          }
+        },
+        "by_intent": {
+          "account_access": {
+            "n": 15,
+            "hit@1": 0.7333,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr@10": 0.8556,
+            "recall@5": 0.9667
+          },
+          "api_keys": {
+            "n": 15,
+            "hit@1": 1.0,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr@10": 1.0,
+            "recall@5": 1.0
+          },
+          "billing": {
+            "n": 15,
+            "hit@1": 0.7333,
+            "hit@3": 0.9333,
+            "hit@5": 1.0,
+            "mrr@10": 0.8389,
+            "recall@5": 0.9333
+          },
+          "checkout": {
+            "n": 16,
+            "hit@1": 0.8125,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr@10": 0.8958,
+            "recall@5": 0.9062
+          },
+          "disputes": {
+            "n": 17,
+            "hit@1": 0.7059,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr@10": 0.8431,
+            "recall@5": 0.9216
+          },
+          "failed_payments": {
+            "n": 16,
+            "hit@1": 0.875,
+            "hit@3": 0.9375,
+            "hit@5": 1.0,
+            "mrr@10": 0.9219,
+            "recall@5": 0.9688
+          },
+          "kyc": {
+            "n": 17,
+            "hit@1": 0.8824,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr@10": 0.9412,
+            "recall@5": 0.9706
+          },
+          "payouts": {
+            "n": 17,
+            "hit@1": 0.8235,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr@10": 0.902,
+            "recall@5": 0.9412
+          },
+          "refunds": {
+            "n": 16,
+            "hit@1": 0.875,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr@10": 0.9375,
+            "recall@5": 0.9688
+          },
+          "settlements": {
+            "n": 17,
+            "hit@1": 0.8235,
+            "hit@3": 0.9412,
+            "hit@5": 1.0,
+            "mrr@10": 0.8971,
+            "recall@5": 0.902
+          },
+          "webhooks": {
+            "n": 16,
+            "hit@1": 0.875,
+            "hit@3": 1.0,
+            "hit@5": 1.0,
+            "mrr@10": 0.9271,
+            "recall@5": 0.9062
+          }
+        },
+        "latency_ms_p50": 16.5
+      }
+    },
+    "hybrid_misses_at_3": [
+      {
+        "id": "T010",
+        "gold": [
+          "CHK-02"
+        ],
+        "top3": [
+          "PAY-03",
+          "PAY-04",
+          "PAY-01"
+        ]
+      },
+      {
+        "id": "T014",
+        "gold": [
+          "SET-02",
+          "SET-01"
+        ],
+        "top3": [
+          "CHK-02",
+          "SET-03",
+          "CHK-01"
+        ]
+      },
+      {
+        "id": "T029",
+        "gold": [
+          "REF-01",
+          "REF-05"
+        ],
+        "top3": [
+          "PAY-01",
+          "PAY-02",
+          "WHK-05"
+        ]
+      },
+      {
+        "id": "T042",
+        "gold": [
+          "PYO-02"
+        ],
+        "top3": [
+          "PAY-01",
+          "SET-06",
+          "SET-03"
+        ]
+      },
+      {
+        "id": "T047",
+        "gold": [
+          "DSP-02",
+          "DSP-01"
+        ],
+        "top3": [
+          "PAY-01",
+          "DSP-04",
+          "REF-03"
+        ]
+      },
+      {
+        "id": "T049",
+        "gold": [
+          "ACC-04"
+        ],
+        "top3": [
+          "INV-02",
+          "INV-03",
+          "INV-01"
+        ]
+      },
+      {
+        "id": "T062",
+        "gold": [
+          "KYC-04"
+        ],
+        "top3": [
+          "SET-05",
+          "KYC-03",
+          "WHK-05"
+        ]
+      },
+      {
+        "id": "T070",
+        "gold": [
+          "KYC-04",
+          "KYC-03"
+        ],
+        "top3": [
+          "ACC-01",
+          "ACC-03",
+          "CHK-03"
+        ]
+      },
+      {
+        "id": "T098",
+        "gold": [
+          "PAY-02",
+          "PAY-03"
+        ],
+        "top3": [
+          "WHK-05",
+          "PAY-01",
+          "PAY-04"
+        ]
+      },
+      {
+        "id": "T108",
+        "gold": [
+          "CHK-02"
+        ],
+        "top3": [
+          "WHK-05",
+          "PAY-01",
+          "PAY-03"
+        ]
+      },
+      {
+        "id": "T112",
+        "gold": [
+          "API-03",
+          "API-01"
+        ],
+        "top3": [
+          "PAY-02",
+          "CHK-02",
+          "PAY-03"
+        ]
+      },
+      {
+        "id": "T129",
+        "gold": [
+          "PYO-03"
+        ],
+        "top3": [
+          "DSP-03",
+          "INV-01",
+          "INV-03"
+        ]
+      },
+      {
+        "id": "T130",
+        "gold": [
+          "DSP-02"
+        ],
+        "top3": [
+          "DSP-03",
+          "DSP-04",
+          "DSP-01"
+        ]
+      },
+      {
+        "id": "T142",
+        "gold": [
+          "PYO-01"
+        ],
+        "top3": [
+          "PAY-04",
+          "PAY-05",
+          "PAY-03"
+        ]
+      },
+      {
+        "id": "T155",
+        "gold": [
+          "PYO-03",
+          "PYO-02"
+        ],
+        "top3": [
+          "REF-05",
+          "PRC-01",
+          "INV-03"
+        ]
+      },
+      {
+        "id": "T158",
+        "gold": [
+          "ACC-04"
+        ],
+        "top3": [
+          "CHK-03",
+          "PAY-04",
+          "ACC-01"
+        ]
+      },
+      {
+        "id": "T160",
+        "gold": [
+          "WHK-04"
+        ],
+        "top3": [
+          "REF-03",
+          "REF-02",
+          "REF-04"
+        ]
+      },
+      {
+        "id": "T162",
+        "gold": [
+          "PRC-01"
+        ],
+        "top3": [
+          "PRC-02",
+          "INV-03",
+          "PRC-03"
+        ]
+      },
+      {
+        "id": "T168",
+        "gold": [
+          "PYO-02",
+          "PYO-01"
+        ],
+        "top3": [
+          "SET-06",
+          "SET-03",
+          "INV-02"
+        ]
+      },
+      {
+        "id": "T170",
+        "gold": [
+          "KYC-04"
+        ],
+        "top3": [
+          "PAY-05",
+          "WHK-05",
+          "KYC-03"
+        ]
+      },
+      {
+        "id": "T177",
+        "gold": [
+          "REF-01"
+        ],
+        "top3": [
+          "PAY-01",
+          "REF-03",
+          "SET-04"
+        ]
+      },
+      {
+        "id": "T179",
+        "gold": [
+          "SET-01",
+          "SET-02"
+        ],
+        "top3": [
+          "PAY-05",
+          "PAY-01",
+          "PAY-04"
+        ]
+      },
+      {
+        "id": "T180",
+        "gold": [
+          "PYO-03"
+        ],
+        "top3": [
+          "PAY-01",
+          "PAY-04",
+          "PAY-03"
+        ]
+      },
+      {
+        "id": "T186",
+        "gold": [
+          "CHK-02"
+        ],
+        "top3": [
+          "SET-06",
+          "PAY-01",
+          "WHK-05"
+        ]
+      }
+    ]
+  },
+  "handling_time": {
+    "status": "no review data",
+    "reviews": 0
+  }
+}

@@ -1,0 +1,56 @@
+# Optional n8n layer: webhook intake -> triage API -> per-decision notifications.
+#   docker compose -f docker-compose.yml -f docker-compose.n8n.yml up -d --build
+#   curl -X POST http://localhost:5679/webhook/ticket -H 'Content-Type: application/json' -d '{"subject":"...","body":"..."}'
+# See n8n/README.md. Self-contained, so it works whether or not the base file also defines n8n.
+
+x-n8n-env: &n8n-env
+  N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-change-me-to-a-long-random-string}
+  N8N_DIAGNOSTICS_ENABLED: "false"
+  N8N_PERSONALIZATION_ENABLED: "false"
+  N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+  N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+  GENERIC_TIMEZONE: Asia/Kolkata
+  TZ: Asia/Kolkata
+
+services:
+  # Runs once before n8n: imports n8n/workflows/triage.json into the shared volume and publishes it.
+  n8n-import:
+    image: n8nio/n8n:2.40.0
+    entrypoint: ["/bin/sh", "/workflows/import.sh"]
+    environment: *n8n-env
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n:/workflows:ro
+    restart: "no"
+
+  n8n:
+    image: n8nio/n8n:2.40.0
+    environment:
+      <<: *n8n-env
+      N8N_HOST: localhost
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5679/
+      N8N_SECURE_COOKIE: "false"
+      N8N_RUNNERS_ENABLED: "true"
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: "168"
+    ports:
+      - "5679:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    depends_on:
+      n8n-import:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  n8n_data:

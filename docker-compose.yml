@@ -1,0 +1,63 @@
+name: triagedesk
+
+x-app-env: &app-env
+  DATABASE_URL: postgresql://triagedesk:${POSTGRES_PASSWORD:-triagedesk}@db:5432/triagedesk
+  LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+  LLM_API_KEY: ${LLM_API_KEY:-}
+  LLM_BASE_URL: ${LLM_BASE_URL:-}
+  LLM_MODEL: ${LLM_MODEL:-}
+  LLM_JSON_MODE: ${LLM_JSON_MODE:-true}
+  EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER:-fastembed}
+  EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-BAAI/bge-small-en-v1.5}
+  EMBEDDINGS_DIM: ${EMBEDDINGS_DIM:-384}
+  KB_BASE_URL: ${KB_BASE_URL:-http://localhost:8401/kb}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  LOG_JSON: ${LOG_JSON:-true}
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: triagedesk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-triagedesk}
+      POSTGRES_DB: triagedesk
+    ports:
+      - "15433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U triagedesk -d triagedesk"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: .
+    environment: *app-env
+    ports:
+      - "8401:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ui:
+    build: .
+    command: ["streamlit", "run", "ui/app.py", "--server.port", "8502", "--server.address", "0.0.0.0",
+              "--server.headless", "true", "--browser.gatherUsageStats", "false"]
+    environment:
+      API_URL: http://api:8000
+    ports:
+      - "8502:8502"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8502/_stcore/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:

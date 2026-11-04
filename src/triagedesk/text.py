@@ -5,10 +5,10 @@ from __future__ import annotations
 import re
 
 STOPWORDS = frozenset(
-    """a an and are as at be been but by can could do does for from had has have hi hello how i if in
-    into is it its me my no not of on or our please so than that the their them then there these
-    they this to us was we were what when where which who why will with would you your yours also
-    any all just get got thanks thank team regards dear sir madam hai ka ki ke ko se""".split()
+    """a an and are as at be been but by can could do does for from had has have hi hello how i if in into
+    is it its me my no not of on or our please so than that the their them then there these they this to
+    us was we were what when where which who why will with would you your yours also any all just get
+    got thanks thank team regards dear sir madam hai ka ki ke ko se""".split()
 )
 _TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9_+.\-]*[a-z0-9]|[a-z0-9]")
 _SENT_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9`\"(])")

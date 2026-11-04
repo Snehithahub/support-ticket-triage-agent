@@ -26,10 +26,13 @@ INTENT_DESCRIPTIONS: dict[Intent, str] = {
     Intent.SETTLEMENTS: "Payouts to the merchant bank account: schedule, delays, holds, reconciliation.",
     Intent.KYC: "Merchant onboarding verification documents, KYC rejection, re-KYC.",
     Intent.API_KEYS: "API key generation/regeneration, 401/403/429 API errors, test vs live mode.",
-    Intent.WEBHOOKS: "Webhook setup, signature verification, delivery failures, retries, events.",
+    Intent.WEBHOOKS: (
+        "Webhook setup, signature verification, delivery failures, retries, events, "
+        "payment captured but order not updated."
+    ),
     Intent.DISPUTES: "Chargebacks, disputes raised by banks, evidence submission, dispute fees.",
     Intent.ACCOUNT_ACCESS: "Login, password reset, 2FA, locked accounts, team members and roles.",
-    Intent.CHECKOUT: "Checkout/order integration errors, payment links, payment captured but order not updated.",
+    Intent.CHECKOUT: "Checkout/order integration errors (order_id, amount, signature), payment links.",
     Intent.PAYOUTS: "Payouts to vendors/customers via IMPS/NEFT/RTGS/UPI: failed, reversed, queued, fees.",
     Intent.BILLING: "Pricing plans, MDR and fees, GST tax invoices, credit notes, plan changes.",
     Intent.OTHER: "Anything not covered above (feature requests, partnerships, spam, unclear).",

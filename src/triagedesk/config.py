@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     rrf_k: int = 60
     # Below this classifier confidence, retrieval is not filtered by intent.
     retrieval_filter_min_confidence: float = 0.5
+    # Unfiltered hits merged into intent-filtered results (cross-category answers).
+    retrieval_unfiltered_mix: int = 2
 
     classify_max_attempts: int = 3
     draft_max_attempts: int = 2

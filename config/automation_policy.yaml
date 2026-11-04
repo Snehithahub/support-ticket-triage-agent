@@ -1,0 +1,32 @@
+# Per-intent automation policy. Read by triagedesk.policy; the eval's recommendation table
+# compares measured precision against these settings.
+#
+# risk_class:
+#   money_movement  - the answer can change, hold or promise money. Never auto-sent; a human
+#                     checks the specific transaction. Escalated when urgent.
+#   regulated       - KYC / identity / account security. Never auto-sent.
+#   informational   - how-to and troubleshooting answered fully by public docs. May auto-send
+#                     when every gate passes and confidence >= min_confidence.
+version: "2026-11-04"
+supported_languages: [en, hinglish]
+escalate_urgencies: [critical]      # global: any intent at these urgencies is escalated
+review_negative_sentiment: true     # angry customers always get a human
+default:
+  risk_class: informational
+  auto_send: false
+  min_confidence: 0.9
+  team: general-support
+  escalate_urgencies: []
+intents:
+  refunds:         {risk_class: money_movement, auto_send: false, team: payments-ops, escalate_urgencies: [high]}
+  settlements:     {risk_class: money_movement, auto_send: false, team: settlements-ops, escalate_urgencies: [high]}
+  payouts:         {risk_class: money_movement, auto_send: false, team: payouts-ops, escalate_urgencies: [high]}
+  disputes:        {risk_class: money_movement, auto_send: false, team: risk-disputes, escalate_urgencies: [high]}
+  kyc:             {risk_class: regulated, auto_send: false, team: risk-compliance}
+  account_access:  {risk_class: regulated, auto_send: false, team: trust-safety, escalate_urgencies: [high]}
+  failed_payments: {risk_class: informational, auto_send: true, min_confidence: 0.9, team: payments-support}
+  api_keys:        {risk_class: informational, auto_send: true, min_confidence: 0.85, team: developer-support}
+  webhooks:        {risk_class: informational, auto_send: true, min_confidence: 0.85, team: developer-support}
+  checkout:        {risk_class: informational, auto_send: true, min_confidence: 0.85, team: developer-support}
+  billing:         {risk_class: informational, auto_send: true, min_confidence: 0.9, team: billing}
+  other:           {risk_class: informational, auto_send: false, team: general-support}

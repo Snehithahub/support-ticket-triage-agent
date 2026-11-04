@@ -1,0 +1,1141 @@
+{
+  "id": "TriageDeskIntake",
+  "name": "TriageDesk: ticket intake and routing",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ticket",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "43e7f801-5a07-5c4b-b0d3-863156548861",
+      "name": "Webhook: POST /ticket",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "4d7f3a52-1c9e-4b8a-9e6d-2f1a7c3b5e90"
+    },
+    {
+      "parameters": {
+        "mailbox": "INBOX",
+        "postProcessAction": "read",
+        "format": "simple",
+        "options": {}
+      },
+      "id": "3a457e15-6980-5ca1-b838-8f272cb5d848",
+      "name": "Email inbox (IMAP, disabled)",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        560
+      ],
+      "disabled": true,
+      "credentials": {
+        "imap": {
+          "id": "REPLACE_WITH_IMAP_CREDENTIAL_ID",
+          "name": "Support inbox IMAP (placeholder)"
+        }
+      },
+      "notes": "Alternative entry: polls a support mailbox. Disabled by default. Enable after creating an IMAP credential (Gmail works with an app password). Respond-to-Webhook is a no-op for these runs."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dac9866d-f965-5456-bf3a-b33145f05ec0",
+              "name": "body",
+              "value": "={{ { subject: $json.subject || '', body: $json.textPlain || $json.textHtml || '', customer_email: (String($json.from || '').match(/[^<\\s]+@[^>\\s]+/) || [null])[0], external_id: $json.metadata?.['message-id'] || null } }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8986ec3a-dc5a-57af-a8de-f7ee214b282f",
+      "name": "Map email to ticket",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        560
+      ],
+      "notes": "Reshapes an IMAP message into the same {body: {...}} shape the webhook produces."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "760c9621-02a9-571a-8c71-e4f111b75063",
+              "name": "api_base_url",
+              "value": "http://api:8000",
+              "type": "string"
+            },
+            {
+              "id": "9949d7dc-3d0d-5ab9-a7e4-aee8d0746185",
+              "name": "subject",
+              "value": "={{ String($json.body?.subject ?? '').trim().slice(0, 500) }}",
+              "type": "string"
+            },
+            {
+              "id": "19e067af-f923-5a61-9adb-5f0c3614f3cc",
+              "name": "body",
+              "value": "={{ String($json.body?.body ?? $json.body?.message ?? '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "ca650008-93f9-588f-8efd-366289a08c82",
+              "name": "customer_email",
+              "value": "={{ $json.body?.customer_email ?? $json.body?.email ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "b92596dd-4b6f-5b07-8869-252f8c61093d",
+              "name": "external_id",
+              "value": "={{ $json.body?.external_id || $json.headers?.['idempotency-key'] || ('n8n-' + $execution.id) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a8a52112-f277-5931-8b03-b5c0e01ebbd7",
+      "name": "Normalize ticket",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ],
+      "notes": "api_base_url is the triage API as seen from inside docker compose (container port 8000). external_id makes the API call idempotent, so HTTP retries never create duplicate tickets."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.api_base_url }}/tickets",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ subject: $json.subject, body: $json.body, customer_email: $json.customer_email || null, channel: 'n8n', external_id: $json.external_id }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "ae6f43bf-80f8-5416-9ca7-4773511ca0f6",
+      "name": "Triage API: POST /tickets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e44e1caa-b662-5252-a27e-7623ecb39100",
+              "leftValue": "={{ $json.idempotent_replay === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5009f2f9-e0dc-57cb-8465-327480f3e55e",
+      "name": "Already triaged?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        900,
+        200
+      ],
+      "notes": "An idempotent replay (same external_id) skips notifications so webhook retries never double-notify."
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "aff728d5-9fcd-596b-9b82-2fd0b707433a",
+                    "leftValue": "={{ $json.routing?.decision ?? '' }}",
+                    "rightValue": "auto_send",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "auto_send"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fbdd76b6-b7e5-56e7-ba9d-e4da280b1f0e",
+                    "leftValue": "={{ $json.routing?.decision ?? '' }}",
+                    "rightValue": "human_review",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "human_review"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0b094229-2276-56da-9c0b-c2bc81701f61",
+                    "leftValue": "={{ $json.routing?.decision ?? '' }}",
+                    "rightValue": "escalate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "escalate"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "no_decision"
+        }
+      },
+      "id": "4a90d5bf-d579-547f-9d19-3f4122cf403b",
+      "name": "Route by decision",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1120,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: 'triage_api_error', detail: $json.error?.message ?? 'triage API call failed', description: $json.error?.description ?? null } }}",
+        "options": {
+          "responseCode": "={{ Number((String($json.error?.message ?? '').match(/^(4\\d\\d) /) || [0, 502])[1]) }}"
+        }
+      },
+      "id": "dc0c289c-3f67-5b46-acc3-37848c7737e2",
+      "name": "Respond: triage API error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        900,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d93878f5-24c9-51e6-b066-c921538305d5",
+              "name": "ticket_id",
+              "value": "={{ $('Triage API: POST /tickets').first().json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "429e6dfc-886e-5372-8401-7133212a1daf",
+              "name": "decision",
+              "value": "={{ 'auto_send' }}",
+              "type": "string"
+            },
+            {
+              "id": "037dc2c3-b061-5a10-8f4e-926eab644dfe",
+              "name": "intent",
+              "value": "={{ $('Triage API: POST /tickets').first().json.classification?.intent ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "de4a49e0-6fa7-52fa-90be-d4ba1e71d3b1",
+              "name": "urgency",
+              "value": "={{ $('Triage API: POST /tickets').first().json.classification?.urgency ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "7a6ad141-69a2-5d2b-b4f9-bf37f5dd9f1b",
+              "name": "team",
+              "value": "={{ $('Triage API: POST /tickets').first().json.routing?.team ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "43548624-640e-56c6-83a5-1f73cd5b6f82",
+              "name": "status",
+              "value": "={{ $('Triage API: POST /tickets').first().json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "25c8c56d-c814-5d06-a8b7-98c93d03e201",
+              "name": "customer_email",
+              "value": "={{ $('Triage API: POST /tickets').first().json.customer_email ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "bb145055-7d28-5489-8489-889f10347713",
+              "name": "draft_reply",
+              "value": "={{ $('Triage API: POST /tickets').first().json.draft?.body ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "1db5b24d-9643-5c89-9456-c10c7abff1b5",
+              "name": "action",
+              "value": "Auto-send approved; the Email node sends the draft to the merchant",
+              "type": "string"
+            },
+            {
+              "id": "66b31db8-6bc4-575c-a584-b0b0681ae2b2",
+              "name": "notify_channel",
+              "value": "#support-auto-sent",
+              "type": "string"
+            },
+            {
+              "id": "23d2c778-b9dd-5328-85f6-f02a130d311e",
+              "name": "summary",
+              "value": "={{ '[' + ('auto_send') + '] ' + ($('Triage API: POST /tickets').first().json.routing?.team ?? '-') + ' | ' + ($('Triage API: POST /tickets').first().json.classification?.intent ?? '?') + '/' + ($('Triage API: POST /tickets').first().json.classification?.urgency ?? '?') + ' | ' + ($('Triage API: POST /tickets').first().json.subject || '(no subject)') + ' | ticket ' + $('Triage API: POST /tickets').first().json.id + ' | ' + 'Auto-send approved; the Email node sends the draft to the merchant' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "12a141ad-c545-5fa0-93ce-a1226db1f341",
+      "name": "Summary: auto_send",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1380,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "accessToken",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#support-auto-sent",
+          "mode": "name"
+        },
+        "text": "={{ $json.summary }}",
+        "otherOptions": {}
+      },
+      "id": "382ad048-f354-58a2-b76e-b36e1355bca3",
+      "name": "Slack: #support-auto-sent (disabled)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1620,
+        40
+      ],
+      "disabled": true,
+      "credentials": {
+        "slackApi": {
+          "id": "REPLACE_WITH_SLACK_CREDENTIAL_ID",
+          "name": "Slack bot (placeholder)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "Merchant Support <support@example.com>",
+        "toEmail": "={{ $json.customer_email }}",
+        "subject": "={{ 'Re: ' + ($('Triage API: POST /tickets').first().json.subject || 'your support request') }}",
+        "emailFormat": "text",
+        "text": "={{ $json.draft_reply }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "1811d896-0c40-5510-b271-0fb959f4a0b7",
+      "name": "Email: draft reply to merchant (disabled)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1620,
+        200
+      ],
+      "disabled": true,
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_SMTP_CREDENTIAL_ID",
+          "name": "SMTP (placeholder)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d93878f5-24c9-51e6-b066-c921538305d5",
+              "name": "ticket_id",
+              "value": "={{ $('Triage API: POST /tickets').first().json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "0892dd57-b194-5982-8c5d-96dabca58926",
+              "name": "decision",
+              "value": "={{ 'human_review' }}",
+              "type": "string"
+            },
+            {
+              "id": "037dc2c3-b061-5a10-8f4e-926eab644dfe",
+              "name": "intent",
+              "value": "={{ $('Triage API: POST /tickets').first().json.classification?.intent ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "de4a49e0-6fa7-52fa-90be-d4ba1e71d3b1",
+              "name": "urgency",
+              "value": "={{ $('Triage API: POST /tickets').first().json.classification?.urgency ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "7a6ad141-69a2-5d2b-b4f9-bf37f5dd9f1b",
+              "name": "team",
+              "value": "={{ $('Triage API: POST /tickets').first().json.routing?.team ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "43548624-640e-56c6-83a5-1f73cd5b6f82",
+              "name": "status",
+              "value": "={{ $('Triage API: POST /tickets').first().json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "25c8c56d-c814-5d06-a8b7-98c93d03e201",
+              "name": "customer_email",
+              "value": "={{ $('Triage API: POST /tickets').first().json.customer_email ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "bb145055-7d28-5489-8489-889f10347713",
+              "name": "draft_reply",
+              "value": "={{ $('Triage API: POST /tickets').first().json.draft?.body ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "bf225769-2e02-509d-8dda-c62d864a9ea3",
+              "name": "action",
+              "value": "Queued for an agent in the review UI",
+              "type": "string"
+            },
+            {
+              "id": "0ed04c36-1761-532b-a924-2f7a6d64137c",
+              "name": "notify_channel",
+              "value": "#support-review-queue",
+              "type": "string"
+            },
+            {
+              "id": "991c6fde-c98d-591d-8d07-0dfab2782292",
+              "name": "summary",
+              "value": "={{ '[' + ('human_review') + '] ' + ($('Triage API: POST /tickets').first().json.routing?.team ?? '-') + ' | ' + ($('Triage API: POST /tickets').first().json.classification?.intent ?? '?') + '/' + ($('Triage API: POST /tickets').first().json.classification?.urgency ?? '?') + ' | ' + ($('Triage API: POST /tickets').first().json.subject || '(no subject)') + ' | ticket ' + $('Triage API: POST /tickets').first().json.id + ' | ' + 'Queued for an agent in the review UI' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1ce020d7-2a48-52a1-8dcf-d32989292557",
+      "name": "Summary: human_review",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1380,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "accessToken",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#support-review-queue",
+          "mode": "name"
+        },
+        "text": "={{ $json.summary }}",
+        "otherOptions": {}
+      },
+      "id": "baf3c877-fdff-505f-887d-512ff269f0fe",
+      "name": "Slack: #support-review-queue (disabled)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1620,
+        340
+      ],
+      "disabled": true,
+      "credentials": {
+        "slackApi": {
+          "id": "REPLACE_WITH_SLACK_CREDENTIAL_ID",
+          "name": "Slack bot (placeholder)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "TriageDesk <triagedesk@example.com>",
+        "toEmail": "support-review@example.com",
+        "subject": "={{ '[' + $json.decision + '] ' + $json.intent + '/' + $json.urgency + ' ticket ' + $json.ticket_id }}",
+        "emailFormat": "text",
+        "text": "={{ $json.summary + '\\n\\nOpen the review UI: http://localhost:8502\\n\\nDraft:\\n' + ($json.draft_reply || '(no draft)') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "da8e6431-c0f3-5e81-9ac8-a7240ebfc6b6",
+      "name": "Email: support-review@example.com (disabled)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1620,
+        500
+      ],
+      "disabled": true,
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_SMTP_CREDENTIAL_ID",
+          "name": "SMTP (placeholder)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d93878f5-24c9-51e6-b066-c921538305d5",
+              "name": "ticket_id",
+              "value": "={{ $('Triage API: POST /tickets').first().json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "a87bb749-e957-58f8-9a51-20fba9f93336",
+              "name": "decision",
+              "value": "={{ 'escalate' }}",
+              "type": "string"
+            },
+            {
+              "id": "037dc2c3-b061-5a10-8f4e-926eab644dfe",
+              "name": "intent",
+              "value": "={{ $('Triage API: POST /tickets').first().json.classification?.intent ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "de4a49e0-6fa7-52fa-90be-d4ba1e71d3b1",
+              "name": "urgency",
+              "value": "={{ $('Triage API: POST /tickets').first().json.classification?.urgency ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "7a6ad141-69a2-5d2b-b4f9-bf37f5dd9f1b",
+              "name": "team",
+              "value": "={{ $('Triage API: POST /tickets').first().json.routing?.team ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "43548624-640e-56c6-83a5-1f73cd5b6f82",
+              "name": "status",
+              "value": "={{ $('Triage API: POST /tickets').first().json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "25c8c56d-c814-5d06-a8b7-98c93d03e201",
+              "name": "customer_email",
+              "value": "={{ $('Triage API: POST /tickets').first().json.customer_email ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "bb145055-7d28-5489-8489-889f10347713",
+              "name": "draft_reply",
+              "value": "={{ $('Triage API: POST /tickets').first().json.draft?.body ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "913793a9-46df-56c4-9467-d8ebf5114844",
+              "name": "action",
+              "value": "Escalated to the on-call owner team",
+              "type": "string"
+            },
+            {
+              "id": "0fc029c4-b2bb-5e01-9b2b-fac14f9b1356",
+              "name": "notify_channel",
+              "value": "#support-escalations",
+              "type": "string"
+            },
+            {
+              "id": "74b614aa-3c7d-5428-92e4-c4925e04392b",
+              "name": "summary",
+              "value": "={{ '[' + ('escalate') + '] ' + ($('Triage API: POST /tickets').first().json.routing?.team ?? '-') + ' | ' + ($('Triage API: POST /tickets').first().json.classification?.intent ?? '?') + '/' + ($('Triage API: POST /tickets').first().json.classification?.urgency ?? '?') + ' | ' + ($('Triage API: POST /tickets').first().json.subject || '(no subject)') + ' | ticket ' + $('Triage API: POST /tickets').first().json.id + ' | ' + 'Escalated to the on-call owner team' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6731d359-ee00-51e8-aa04-9bd36fb27f10",
+      "name": "Summary: escalate",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1380,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "accessToken",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#support-escalations",
+          "mode": "name"
+        },
+        "text": "={{ $json.summary }}",
+        "otherOptions": {}
+      },
+      "id": "c2f0b823-f18a-54a1-a624-0edcdfdd811d",
+      "name": "Slack: #support-escalations (disabled)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1620,
+        640
+      ],
+      "disabled": true,
+      "credentials": {
+        "slackApi": {
+          "id": "REPLACE_WITH_SLACK_CREDENTIAL_ID",
+          "name": "Slack bot (placeholder)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "TriageDesk <triagedesk@example.com>",
+        "toEmail": "support-oncall@example.com",
+        "subject": "={{ '[' + $json.decision + '] ' + $json.intent + '/' + $json.urgency + ' ticket ' + $json.ticket_id }}",
+        "emailFormat": "text",
+        "text": "={{ $json.summary + '\\n\\nOpen the review UI: http://localhost:8502\\n\\nDraft:\\n' + ($json.draft_reply || '(no draft)') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c5f3356d-48d7-5cae-9527-b9edb5c583e1",
+      "name": "Email: support-oncall@example.com (disabled)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1620,
+        800
+      ],
+      "disabled": true,
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_SMTP_CREDENTIAL_ID",
+          "name": "SMTP (placeholder)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d93878f5-24c9-51e6-b066-c921538305d5",
+              "name": "ticket_id",
+              "value": "={{ $('Triage API: POST /tickets').first().json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "6b8a9f66-ab43-5c5f-9a92-8fd6f872e373",
+              "name": "decision",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "037dc2c3-b061-5a10-8f4e-926eab644dfe",
+              "name": "intent",
+              "value": "={{ $('Triage API: POST /tickets').first().json.classification?.intent ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "de4a49e0-6fa7-52fa-90be-d4ba1e71d3b1",
+              "name": "urgency",
+              "value": "={{ $('Triage API: POST /tickets').first().json.classification?.urgency ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "7a6ad141-69a2-5d2b-b4f9-bf37f5dd9f1b",
+              "name": "team",
+              "value": "={{ $('Triage API: POST /tickets').first().json.routing?.team ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "43548624-640e-56c6-83a5-1f73cd5b6f82",
+              "name": "status",
+              "value": "={{ $('Triage API: POST /tickets').first().json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "25c8c56d-c814-5d06-a8b7-98c93d03e201",
+              "name": "customer_email",
+              "value": "={{ $('Triage API: POST /tickets').first().json.customer_email ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "bb145055-7d28-5489-8489-889f10347713",
+              "name": "draft_reply",
+              "value": "={{ $('Triage API: POST /tickets').first().json.draft?.body ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "58dbc9a4-4714-53c0-9af3-7da73f9a3f46",
+              "name": "action",
+              "value": "Triage stored without a routing decision; check the ticket",
+              "type": "string"
+            },
+            {
+              "id": "0ed04c36-1761-532b-a924-2f7a6d64137c",
+              "name": "notify_channel",
+              "value": "#support-review-queue",
+              "type": "string"
+            },
+            {
+              "id": "115f3904-cd37-502f-a32f-6c9f95c412aa",
+              "name": "summary",
+              "value": "={{ '[' + ('') + '] ' + ($('Triage API: POST /tickets').first().json.routing?.team ?? '-') + ' | ' + ($('Triage API: POST /tickets').first().json.classification?.intent ?? '?') + '/' + ($('Triage API: POST /tickets').first().json.classification?.urgency ?? '?') + ' | ' + ($('Triage API: POST /tickets').first().json.subject || '(no subject)') + ' | ticket ' + $('Triage API: POST /tickets').first().json.id + ' | ' + 'Triage stored without a routing decision; check the ticket' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9f37a3ab-8440-53ad-b443-3fced6b36889",
+      "name": "Summary: no_decision",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1380,
+        1020
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d93878f5-24c9-51e6-b066-c921538305d5",
+              "name": "ticket_id",
+              "value": "={{ $('Triage API: POST /tickets').first().json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "da42dba3-b868-5526-9ce2-6f90ae15aee8",
+              "name": "decision",
+              "value": "={{ $('Triage API: POST /tickets').first().json.routing?.decision ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "037dc2c3-b061-5a10-8f4e-926eab644dfe",
+              "name": "intent",
+              "value": "={{ $('Triage API: POST /tickets').first().json.classification?.intent ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "de4a49e0-6fa7-52fa-90be-d4ba1e71d3b1",
+              "name": "urgency",
+              "value": "={{ $('Triage API: POST /tickets').first().json.classification?.urgency ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "7a6ad141-69a2-5d2b-b4f9-bf37f5dd9f1b",
+              "name": "team",
+              "value": "={{ $('Triage API: POST /tickets').first().json.routing?.team ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "43548624-640e-56c6-83a5-1f73cd5b6f82",
+              "name": "status",
+              "value": "={{ $('Triage API: POST /tickets').first().json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "25c8c56d-c814-5d06-a8b7-98c93d03e201",
+              "name": "customer_email",
+              "value": "={{ $('Triage API: POST /tickets').first().json.customer_email ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "bb145055-7d28-5489-8489-889f10347713",
+              "name": "draft_reply",
+              "value": "={{ $('Triage API: POST /tickets').first().json.draft?.body ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "12964a04-cd41-575b-bc8d-b93727deb7d3",
+              "name": "action",
+              "value": "Duplicate delivery; already triaged, no notifications sent",
+              "type": "string"
+            },
+            {
+              "id": "8c1d461f-026e-5204-8536-1b313d7fb49c",
+              "name": "notify_channel",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "e7c097bd-abc7-58d8-8c68-f8a105b832e8",
+              "name": "summary",
+              "value": "={{ '[' + ($('Triage API: POST /tickets').first().json.routing?.decision ?? '') + '] ' + ($('Triage API: POST /tickets').first().json.routing?.team ?? '-') + ' | ' + ($('Triage API: POST /tickets').first().json.classification?.intent ?? '?') + '/' + ($('Triage API: POST /tickets').first().json.classification?.urgency ?? '?') + ' | ' + ($('Triage API: POST /tickets').first().json.subject || '(no subject)') + ' | ticket ' + $('Triage API: POST /tickets').first().json.id + ' | ' + 'Duplicate delivery; already triaged, no notifications sent' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8ec1be38-ff7b-52ff-b07c-2bf86764b019",
+      "name": "Summary: replay",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1380,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Normalize ticket').first().json.api_base_url }}/tickets/{{ $json.ticket_id }}/events",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ source: 'n8n', event: $('Triage API: POST /tickets').first().json.idempotent_replay === true ? 'n8n_replay' : 'n8n_routed', payload: { decision: $json.decision, team: $json.team, action: $json.action, notify_channel: $json.notify_channel, execution_id: $execution.id } }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "404d5949-6e41-5f50-9afc-ec22a8b0a5f5",
+      "name": "Record routing event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1900,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "Writes an audit event back to the ticket. Failures here never block the webhook response."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ticket_id: $('Triage API: POST /tickets').first().json.id, decision: $('Triage API: POST /tickets').first().json.routing?.decision ?? null, intent: $('Triage API: POST /tickets').first().json.classification?.intent ?? null, urgency: $('Triage API: POST /tickets').first().json.classification?.urgency ?? null, team: $('Triage API: POST /tickets').first().json.routing?.team ?? null, status: $('Triage API: POST /tickets').first().json.status, idempotent_replay: $('Triage API: POST /tickets').first().json.idempotent_replay === true, demo_mode: $('Triage API: POST /tickets').first().json.demo_mode === true } }}",
+        "options": {}
+      },
+      "id": "02297319-040b-5a34-8e56-4aa9ffc818bb",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2140,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## TriageDesk ticket intake\nPOST /webhook/ticket with {subject, body, customer_email, external_id}.\n\n1. Calls the triage API (POST /tickets) with an idempotency key.\n2. Switches on routing.decision: auto_send / human_review / escalate.\n3. Each branch builds a summary (always on) and has Slack + Email nodes that are **disabled** until you add real credentials (see n8n/README.md).\n4. Records an audit event on the ticket and responds with {ticket_id, decision, intent}.",
+        "height": 260,
+        "width": 520
+      },
+      "id": "c667b4e8-e550-5fbc-94b5-09eef4abed2c",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -260
+      ]
+    }
+  ],
+  "connections": {
+    "Route by decision": {
+      "main": [
+        [
+          {
+            "node": "Summary: auto_send",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Summary: human_review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Summary: escalate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Summary: no_decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary: auto_send": {
+      "main": [
+        [
+          {
+            "node": "Record routing event",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack: #support-auto-sent (disabled)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email: draft reply to merchant (disabled)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary: human_review": {
+      "main": [
+        [
+          {
+            "node": "Record routing event",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack: #support-review-queue (disabled)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email: support-review@example.com (disabled)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary: escalate": {
+      "main": [
+        [
+          {
+            "node": "Record routing event",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack: #support-escalations (disabled)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email: support-oncall@example.com (disabled)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary: no_decision": {
+      "main": [
+        [
+          {
+            "node": "Record routing event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Already triaged?": {
+      "main": [
+        [
+          {
+            "node": "Summary: replay",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route by decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary: replay": {
+      "main": [
+        [
+          {
+            "node": "Record routing event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: POST /ticket": {
+      "main": [
+        [
+          {
+            "node": "Normalize ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email inbox (IMAP, disabled)": {
+      "main": [
+        [
+          {
+            "node": "Map email to ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map email to ticket": {
+      "main": [
+        [
+          {
+            "node": "Normalize ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize ticket": {
+      "main": [
+        [
+          {
+            "node": "Triage API: POST /tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triage API: POST /tickets": {
+      "main": [
+        [
+          {
+            "node": "Already triaged?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond: triage API error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record routing event": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

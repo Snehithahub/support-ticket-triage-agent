@@ -6,3 +6,7 @@ __pycache__/
 .ruff_cache/
 *.egg-info/
 data/*.db
+.cache/
+reports/
+data/eval/results/*
+!data/eval/results/latest_retrieval.json

@@ -27,6 +27,7 @@ The signature is a hex HMAC-SHA256 of `order_id + "|" + payment_id`, computed wi
 import hmac
 import hashlib
 
+
 def verify_payment(order_id: str, payment_id: str, signature: str, key_secret: str) -> bool:
     message = f"{order_id}|{payment_id}".encode("utf-8")
     expected = hmac.new(
